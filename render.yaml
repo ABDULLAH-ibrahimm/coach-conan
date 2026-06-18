@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: coach-web
+    runtime: node
+    nodeVersion: 20
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npx prisma db push && node .next/standalone/server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:/data/coach.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COACH_API_HOST
+        fromService:
+          type: web
+          name: coach-api
+          property: host
+    disk:
+      name: coach-web-db
+      mountPath: /data
+      sizeGB: 1
+
+  - type: web
+    name: coach-api
+    rootDir: mini-services/coach-api
+    buildCommand: curl -fsSL https://bun.sh/install | bash && $HOME/.bun/bin/bun install && $HOME/.bun/bin/bunx prisma generate
+    startCommand: $HOME/.bun/bin/bunx prisma db push && $HOME/.bun/bin/bun index.ts
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:/data/coach.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        fromService:
+          type: web
+          name: coach-web
+          property: host
+    disk:
+      name: coach-api-db
+      mountPath: /data
+      sizeGB: 1

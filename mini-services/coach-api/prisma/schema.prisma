@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Coach {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  profileImage  String   @default("")
+  lastLoginAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  clients       Client[]
+  workoutPrograms WorkoutProgram[]
+  nutritionPlans NutritionPlan[]
+  sessions      Session[]
+  payments      Payment[]
+  auditLogs     AuditLog[]
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  coachId         String
+  name            String
+  email           String
+  password        String   @default("")
+  phone           String   @default("")
+  profileImage    String   @default("")
+  age             Int      @default(0)
+  gender          String   @default("")
+  weight          Float    @default(0)
+  height          Float    @default(0)
+  goal            String   @default("")
+  status          String   @default("active")
+  approvalStatus  String   @default("approved")
+  notes           String   @default("")
+  startDate       DateTime @default(now())
+  lastLoginAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  coach           Coach    @relation(fields: [coachId], references: [id])
+  progress        Progress[]
+  workoutPrograms WorkoutProgram[]
+  nutritionPlans  NutritionPlan[]
+  sessions        Session[]
+  payments        Payment[]
+
+  @@index([coachId])
+  @@index([phone])
+}
+
+model WorkoutProgram {
+  id            String   @id @default(cuid())
+  clientId      String
+  coachId       String
+  name          String
+  description   String   @default("")
+  frequency     String   @default("")
+  durationWeeks Int      @default(4)
+  status        String   @default("active")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  client        Client   @relation(fields: [clientId], references: [id])
+  coach         Coach    @relation(fields: [coachId], references: [id])
+  weeks         ProgramWeek[]
+
+  @@index([coachId])
+  @@index([clientId])
+}
+
+model ProgramWeek {
+  id            String   @id @default(cuid())
+  programId     String
+  weekNumber    Int
+  name          String   @default("")
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  program       WorkoutProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  days          ProgramDay[]
+
+  @@index([programId])
+}
+
+model ProgramDay {
+  id            String   @id @default(cuid())
+  weekId        String
+  dayNumber     Int
+  dayName       String   @default("")
+  isRestDay     Boolean  @default(false)
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  week          ProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  exercises     Exercise[]
+
+  @@index([weekId])
+}
+
+model Exercise {
+  id            String   @id @default(cuid())
+  dayId         String
+  order         Int      @default(0)
+  name          String
+  muscleGroup   String   @default("")
+  sets          Int      @default(3)
+  reps          Int      @default(10)
+  weightKg      Float    @default(0)
+  restSeconds   Int      @default(60)
+  tempo         String   @default("")
+  notes         String   @default("")
+  isSuperset    Boolean  @default(false)
+  supersetGroup Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  day           ProgramDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+}
+
+model NutritionPlan {
+  id            String   @id @default(cuid())
+  clientId      String
+  coachId       String
+  name          String
+  description   String   @default("")
+  calories      Int      @default(0)
+  protein       Int      @default(0)
+  carbs         Int      @default(0)
+  fats          Int      @default(0)
+  fiber         Int      @default(0)
+  waterMl       Int      @default(0)
+  status        String   @default("active")
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  client        Client   @relation(fields: [clientId], references: [id])
+  coach         Coach    @relation(fields: [coachId], references: [id])
+  meals         Meal[]
+
+  @@index([coachId])
+  @@index([clientId])
+}
+
+model Meal {
+  id            String   @id @default(cuid())
+  planId        String
+  mealType      String   @default("")
+  name          String
+  time          String   @default("")
+  notes         String   @default("")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  plan          NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  foodItems     FoodItem[]
+
+  @@index([planId])
+}
+
+model FoodItem {
+  id            String   @id @default(cuid())
+  mealId        String
+  name          String
+  quantity      Float    @default(0)
+  unit          String   @default("")
+  calories      Int      @default(0)
+  protein       Int      @default(0)
+  carbs         Int      @default(0)
+  fats          Int      @default(0)
+  notes         String   @default("")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  meal          Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([mealId])
+}
+
+model Progress {
+  id            String   @id @default(cuid())
+  clientId      String
+  weight        Float    @default(0)
+  bodyFat       Float    @default(0)
+  muscleMass    Float    @default(0)
+  waist         Float    @default(0)
+  chest         Float    @default(0)
+  arms          Float    @default(0)
+  thighs        Float    @default(0)
+  hips          Float    @default(0)
+  notes         String   @default("")
+  photoUrl      String   @default("")
+  recordedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+  client        Client   @relation(fields: [clientId], references: [id])
+
+  @@index([clientId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  clientId      String
+  coachId       String
+  title         String   @default("Training Session")
+  date          DateTime
+  duration      Int      @default(60)
+  type          String   @default("personal")
+  status        String   @default("scheduled")
+  location      String   @default("")
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  client        Client   @relation(fields: [clientId], references: [id])
+  coach         Coach    @relation(fields: [coachId], references: [id])
+
+  @@index([coachId])
+  @@index([clientId])
+  @@index([date])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  clientId      String
+  coachId       String
+  amount        Float    @default(0)
+  currency      String   @default("EGP")
+  status        String   @default("pending")
+  method        String   @default("")
+  description   String   @default("")
+  dueDate       DateTime?
+  paidDate      DateTime?
+  invoiceNumber String   @default("")
+  notes         String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  client        Client   @relation(fields: [clientId], references: [id])
+  coach         Coach    @relation(fields: [coachId], references: [id])
+
+  @@index([coachId])
+  @@index([clientId])
+}
+
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String   @default("")
+  service   String   @default("")
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  name      String
+  rating    Int      @default(5)
+  comment   String
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  coachId   String
+  action    String
+  entity    String
+  entityId  String   @default("")
+  details   String   @default("")
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+  coach     Coach    @relation(fields: [coachId], references: [id])
+
+  @@index([coachId])
+  @@index([createdAt])
+}
